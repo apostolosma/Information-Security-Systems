@@ -24,9 +24,9 @@ unsigned char grid[5][5];
 
 unsigned int seen[26];
 
-unsigned char *playfair_encrypt(FILE *f_plaintext, unsigned char *plaintext);
+unsigned char *playfair_encrypt(FILE *f_plaintext, unsigned char *plaintext, FILE *output);
 
-unsigned char *playfair_decrypt(FILE *f_plaintext, unsigned char *plaintext);
+unsigned char *playfair_decrypt(FILE *f_plaintext, unsigned char *plaintext, FILE *output);
 
 void construct_grid(unsigned char *plaintext);
 
