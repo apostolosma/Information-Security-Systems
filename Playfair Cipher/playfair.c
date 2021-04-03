@@ -84,18 +84,18 @@ playfair_encrypt(FILE *f_plaintext, unsigned char *plaintext){
 
 			if(pc1 -> row == pc2 -> row) {
 
-				if(wrap(pc1 -> row + 1,pc1 -> col)) {
-					pc1 -> row = 0;
-					pc2 -> row = 0;
+				if(wrap(pc1 -> row)) {
+					pc1 -> row = -1;
+					pc2 -> row = -1;
 				}
 
 				encrypted_c1 = grid[pc1 -> row + 1][pc1 -> col];
 				encrypted_c2 = grid[pc2 -> row + 1][pc2 -> col];
 			}
 			if(pc1 -> col == pc2 -> col) {
-				if(wrap(pc1 -> row, pc1 -> col + 1)) {
-					pc1 -> col = 0;
-					pc2 -> col = 0;
+				if(wrap(pc1 -> col)) {
+					pc1 -> col = -1;
+					pc2 -> col = -1;
 				}
 				encrypted_c1 = grid[pc1 -> row][pc1 -> col + 1];
 				encrypted_c2 = grid[pc2 -> row][pc2 -> col + 1];
@@ -111,11 +111,63 @@ playfair_encrypt(FILE *f_plaintext, unsigned char *plaintext){
 	}
 
 	fprintf(output, "%s", cyphertext);
+
+	fprintf(output, "%s", cyphertext);
 }
 
 unsigned char *
 playfair_decrypt(FILE *f_plaintext, unsigned char *plaintext) {
+	char c1, c2, encrypted_c1, encrypted_c2; // characters to be encrypted
+	Pair *pc1, *pc2;
+	char *ciphertext = "";
+
+	if(size % 2 == 1) {
+		char x = 'x';
+		strncat(plaintext, &x, 1);
+	}
 	
+	unsigned int size = strlen(plaintext);
+
+	while(size >= 0) {
+		c1 = *plaintext++;
+		c2 = *plaintext++;
+
+		if( c1 == c2 ) {
+			encryped_c2 = 'X';
+		}
+		else{
+			pc1 = check_position(c1);
+			pc2 = check_position(c2);
+
+			if(pc1 -> row == pc2 -> row) {
+
+				if(reverse_wrap(pc1 -> row)) {
+					pc1 -> row = 5;
+					pc2 -> row = 5;
+				}
+
+				encrypted_c1 = grid[pc1 -> row - 1][pc1 -> col];
+				encrypted_c2 = grid[pc2 -> row - 1][pc2 -> col];
+			}
+			if(pc1 -> col == pc2 -> col) {
+				if(reverse_wrap(pc1 -> col)) {
+					pc1 -> col = 5;
+					pc2 -> col = 5;
+				}
+				encrypted_c1 = grid[pc1 -> row][pc1 -> col - 1];
+				encrypted_c2 = grid[pc2 -> row][pc2 -> col - 1];
+			}
+			if(pc1 -> row != pc2 -> row && pc1 -> col != pc2 -> col) {
+				encryped_c1 = grid[pc1 -> row][pc2 -> col];
+				encryped_c2 = grid[pc1 -> row][pc2 -> col];
+			}
+		}
+		size--;
+		strncat(cyphertext, &encryped_c1, 1);
+		strncat(cyphertext, &encryped_c2, 1);
+	}
+
+	fprintf(output, "%s", cyphertext);
 }
 
 void
@@ -132,7 +184,7 @@ construct_grid(unsigned char *plaintext) {
 			/* So we have to import it into our grid. */
 
 			if( !seen[key] ) {
-				if(wrap(row,col)) {
+				if(wrap(col)) {
 					grid[row][col] = c;
 
 					row++; col = 0;
@@ -155,7 +207,7 @@ construct_grid(unsigned char *plaintext) {
 		/* This means our grid has empty cells, so we need to fill them in */
 		for(int i = 0; i < 26; i ++) {
 			if(!seen[i]) {
-				if(wrap(row,col)) {
+				if(wrap(col)) {
 					grid[row][col] = (char) (i + 'A');
 
 					row++; col = 0;
@@ -176,11 +228,18 @@ int find_key(char c) {
     return (int) c - (int) 'A';
 }
 
-bool wrap(int row,int col) {
-    if(col == 4) {
+bool wrap(int a) {
+    if(a == 4) {
         return true;
     }
-        return false;
+
+     return false;
+}
+
+bool reverse_wrap(int a) {
+	if(a == 0) return true;
+
+	return false;
 }
 
 unsigned char *

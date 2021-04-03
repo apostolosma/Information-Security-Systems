@@ -32,7 +32,9 @@ void construct_grid(unsigned char *plaintext);
 
 int find_key(char c);
 
-bool wrap(int row, int col);
+bool wrap(int a);
+
+bool reverse_wrap(int a);
 
 unsigned char *read_input(FILE *f_plaintext);
 
