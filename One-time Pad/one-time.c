@@ -74,17 +74,16 @@ main(int argc, char* argv[]) {
 char *
 otp_encrypt(char *input_text, char *keyword) {
 	int i = 0;
-	char *s;
+	char *s, *hex;
 	char encrypted_c;
 
 	while(i < input_size)
 	{
 		if (__VALID__(input_text[i]))
 		{
-			printf("%s <- %s ^ %s\n", encrypted_c, keyword[i], input_text[i]);
 			encrypted_c = keyword[i] ^ input_text[i];
-			s = append_string(s, encrypted_c);
-
+			s = append_char(s, encrypted_c);
+			
 		} else if (!__ES_CH__(input_text[i])){
 			/* If char is an escape character or a space, just ignore it.*/
 			fprintf(stderr,"UNRECOGNISED CHARACTER %c: File stream contains unrecognised character.\nThis algorithm supports Numbers[0-9] and Letters[A-Za-z].\n", input_text[i]);
@@ -109,7 +108,7 @@ otp_decrypt(char *input_text, char *keyword) {
 		if (__VALID__(input_text[i]))
 		{
 			encrypted_c = keyword[i] ^ input_text[i];
-			s = append_string(s, encrypted_c);
+			s = append_char(s, encrypted_c);
 
 		} else if (!__ES_CH__(input_text[i])){
 			/* If char is an escape character or a space, just ignore it.*/
@@ -135,7 +134,7 @@ keyword_generator(int size)
 		char rand_char;
 		rand_char = fgetc(urand);
 
-		s = append_string(s, rand_char);
+		s = append_char(s, rand_char);
 		i++;
 	}
 
@@ -144,7 +143,7 @@ keyword_generator(int size)
 
 
 char * 
-append_string(char *string, char char_to_append){
+append_char(char *string, char char_to_append){
 	char *temp;
 
 	temp = (char *) malloc(sizeof(char) * (strlen(string) + 1));
@@ -153,8 +152,13 @@ append_string(char *string, char char_to_append){
 
 	string = "";
 
-	strcat(temp, &char_to_append);
+	if(__PRINTABLE__(char_to_append)) {
+		strcat(temp, &char_to_append);
+	} else {
+		char *hex;
+		sprintf((char *) char_to_append, "%02X", hex);
+		printf("%s", hex);
+	}
 
 	return temp;
 }
-

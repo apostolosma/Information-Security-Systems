@@ -92,6 +92,10 @@ construct_grid(unsigned char *plaintext) {
 			exit(0);
 		}
 	}
+
+	for(int  i = 0; i < 5; i++) {
+		printf("%s", grid[i]);
+	}
 }
 
 int find_key(char c) {
