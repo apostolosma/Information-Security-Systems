@@ -5,6 +5,8 @@ To programma dexetai ws arguments to plaintext kai to operation pou prepei na ka
 e.x.
 ./caesar [plaintext file] [operation]
 
+*VALID OPERATIONS* : encryption/ENCRYPTION, decryption/DECRYPTION
+
 *SIMANTIKO*
 FORMAT TOU TEST:
 [number which denotes shift]
@@ -15,8 +17,6 @@ FORMAT TOU TEST:
  .
  .
  .]
-
-*VALID OPERATIONS* : encryption/ENCRYPTION, decryption/DECRYPTION
 
 __VALID__(c):
 	Elenxei an o xarakthras C einai valid, diladi anikei stous xarakthres pou tha eprepe na dexomaste

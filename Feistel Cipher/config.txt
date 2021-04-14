@@ -1,0 +1,3 @@
+algorithm = feistel
+rounds = 3
+input = test.txt

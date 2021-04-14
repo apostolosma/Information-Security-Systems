@@ -16,53 +16,49 @@
 int 
 main(int argc, char* argv[]) {
 
-	plaintext = fopen(argv[1], "r");
-	
+	FILE *f_plaintext = fopen(argv[1], "r");
+	FILE *output = fopen("result.txt", "a");
+	unsigned char *input_text, *ctxt, *plaintext;
 
 
-	if(plaintext == NULL) {
+	if(f_plaintext == NULL) {
 		perror("Error opening file.");
 	}
 
-	__init__();
+	__init__(f_plaintext);
 
+	input_text = NULL;
+	input_text = read_input(f_plaintext);
 
-	switch(__OPER__(argv[2])) {
-		case ENCRYPT:
-			output = fopen("encrypted.txt", "w");
-			if(output == NULL) {
-				perror("Error opening file.");
-				exit(0);
-			}
-			printf("Performing encryption\n");
-			perform_encryption();
-			
-			break;
-		case DECRYPT:
-			output = fopen("decrypted.txt", "w");
-			if(output == NULL) {
-				perror("Error opening file.");
-				exit(0);
-			}
-			printf("Performing decryption\n");
-			perform_decryption();
-
-			break;
-		default:
-			perror("Arrrrgh! No man's land has been reached.\n");
-			assert(0); /* No man's land. */
-			exit(0);
+	output = fopen("result.txt","a");
+	if(output == NULL) {
+		perror("Error opening file.");
+		exit(0);
 	}
 
+	printf("Performing encryption.\n");
+	ctxt = perform_encryption_caesar(input_text);
+	printf("Performing decryption.\n");
+	plaintext = perform_decryption_caesar(ctxt);
+
+	for(int i = 0; i < strlen(ctxt);i++) {
+		fprintf(output,"%c",ctxt[i]);
+	}
+	fprintf(output,"\n");
+	for(int i = 0; i < strlen(plaintext);i++) {
+		fprintf(output,"%c",plaintext[i]);
+	}
+	fprintf(output,"\n");
 	return 0;
 }
-uint8_t
-caesar_encrypt(uint8_t c, unsigned short shift) {
+
+unsigned char
+caesar_encrypt(unsigned char c, int shift) {
 	uint8_t index, i = 0;
 	unsigned short encrypted_c;
 
 	while( i < ALP_SIZE) {
-		if(c == (int) vocabulary[i]) {
+		if(c == vocabulary[i]) {
 			index = i;
 			break;
 		}
@@ -80,8 +76,8 @@ caesar_encrypt(uint8_t c, unsigned short shift) {
 
 }
 
-uint8_t
-caesar_decrypt(uint8_t c, unsigned short shift) {
+unsigned char
+caesar_decrypt(unsigned char c, int shift) {
 	uint8_t index, i = 0;
 	unsigned short decrypted_c;
 
@@ -104,14 +100,8 @@ caesar_decrypt(uint8_t c, unsigned short shift) {
 }
 
 void 
-__init__() {
-	int i,t,tokens_inserted = 0;
-
-	fscanf(plaintext, "%u" , &t); /* Reading secret key */
-
-	N = (unsigned short) t;
-
-	ctxt = "";
+__init__(FILE *f_plaintext) {
+	int i,tokens_inserted = 0;
 
 	for(i = ASCII_NUM_START; i <= ASCII_NUM_END; i++) {
 
@@ -136,71 +126,86 @@ __init__() {
 
 }
 
-char * 
-append_string(char *string, char char_to_append){
-	char *temp;
 
-	temp = (char *) malloc(sizeof(char) * (strlen(string) + 1));
+unsigned char * 
+append_char(unsigned char *string, char c1) {
+	unsigned char *new;
+	if(string != NULL) {
+		size_t len = strlen(string) + 2; // 3 comes from '\0' character and size of the characters we want to append.
+		new = (unsigned char *)malloc(sizeof(unsigned char *) * len);
 
-	strcat(temp, string);
+		strncat(new, string, strlen(string));
+		strncat(new, &c1, 1);
+	} else {
+		size_t len = 2;
+		new = (unsigned char *)malloc(sizeof(unsigned char *) * len);
 
-	string = "";
+		strncat(new, &c1, 1);
+	}
 
-	strcat(temp, &char_to_append);
-
-	return temp;
+	return new;
 }
 
-void 
-perform_encryption() {
-	char c,encrypted_c;
+unsigned char * 
+perform_encryption_caesar(unsigned char *input_text) {
+	unsigned char c,encrypted_c;
+	unsigned char *ctxt = NULL;
 	int counter = 0;
 
-	do {
-		c = fgetc(plaintext);
-		if (__VALID__(c))
-		{
-			encrypted_c = (char) caesar_encrypt(c, N);
-			ctxt = append_string(ctxt, encrypted_c);
 
-		} else if (!__ES_CH__(c)){
+	for(int i = 0; i < strlen(input_text); i++) {
+		if (__VALID__(input_text[i]) && !__ES_CH__(input_text[i]))
+		{
+			encrypted_c = caesar_encrypt(input_text[i], N);
+			
+			ctxt = append_char(ctxt, encrypted_c);
+		} else if (!__ES_CH__(input_text[i])){
 			/* If char is an escape character or a space, just ignore it.*/
-			fprintf(stderr,"UNRECOGNISED CHARACTER %c: File stream contains unrecognised character.\nThis algorithm supports Numbers[0-9] and Letters[A-Za-z].\n", c);
+			fprintf(stderr,"UNRECOGNISED CHARACTER (%c): File stream contains unrecognised character.\nThis algorithm supports Numbers[0-9] and Letters[A-Za-z].\n", input_text[i]);
 			exit(0);
 		}
-	} while(c != EOF);
+	}
 
-	fprintf(output, "%s", ctxt);
-
-	fclose(plaintext);
-	fclose(output);
+	return ctxt;
 }
 
-void 
-perform_decryption(){
+unsigned char * 
+perform_decryption_caesar(unsigned char *input_text){
 	char c,decrypted_c;
+	unsigned char *plaintext = NULL;
 
-	do {
-		c = fgetc(plaintext);
-		if (__VALID__(c))
+	for(int i = 0; i < strlen(input_text); i++) {
+		if (__VALID__(input_text[i]))
 		{
-			decrypted_c = (char) caesar_decrypt(c, N);
+			decrypted_c = (char) caesar_decrypt(input_text[i], N);
+			plaintext = append_char(plaintext, decrypted_c);
 
-			ctxt = append_string(ctxt, decrypted_c);
-
-			printf("%c\n",c);
-		}
-		else if (!__ES_CH__(c))
-		{
+		} else if (!__ES_CH__(input_text[i])){
 			/* If char is an escape character or a space, just ignore it.*/
 			fprintf(stderr,"UNRECOGNISED CHARACTER %c: File stream contains unrecognised character.\nThis algorithm supports Numbers[0-9] and Letters[A-Za-z].\n", c);
 			exit(0);
 		}
+	}
 
-	} while(c != EOF);
+	return plaintext;
+}
 
-	fprintf(output, "%s", ctxt);
 
-	fclose(plaintext);
-	fclose(output);
+unsigned char *
+read_input(FILE *f_plaintext) {
+	unsigned char *plaintext = NULL;
+	char c;
+
+	do{
+		c = fgetc(f_plaintext);
+		
+		
+		if(__VALID__(c) && !__ES_CH__(c)) {
+			plaintext = append_char(plaintext, c);
+		}
+
+	}while(c != EOF);
+	
+
+	return plaintext;
 }

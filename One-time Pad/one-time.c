@@ -11,118 +11,94 @@
 
 int 
 main(int argc, char* argv[]) {
-	char *keyword, *input_text;
+	unsigned char *keyword, *input_text, *plaintext;
+	int i;
 
-	plaintext = fopen(argv[1], "r");
+	f_plaintext = fopen(argv[1], "r");
 
 
-	if(plaintext == NULL) {
+	if(f_plaintext == NULL) {
 		perror("Error opening file.");
 	}
 
-	int i, file_size = 0;
-	
-	fseek(plaintext, 0, SEEK_END);
-	input_size = ftell(plaintext);
-	fseek(plaintext, 0, SEEK_SET);
 
-	input_text = (char *) malloc(input_size);
-
-	fread(input_text, 1, input_size, plaintext);
+	// reading input
+	input_text = read_input(f_plaintext);
 
 	keyword = "";
+	plaintext = NULL;
+	ctxt = NULL;
 
-	keyword = keyword_generator(input_size);
+	keyword = keyword_generator(strlen(input_text));
 
-	switch(__OPER__(argv[2])) {
-		case ENCRYPT:
-			output = fopen("encrypted.txt", "w");
-			if(output == NULL) {
-				perror("Error opening file.");
-				exit(0);
-			}
+	output = fopen("encrypted.txt", "w");
+	if(output == NULL) {
+		perror("Error opening file.");
+		exit(0);
+	}
+	printf("Plaintext(%ld): %s -> ", strlen(input_text),input_text);
+	for(int i = 0; i < strlen(input_text); i++) {
+		printf("%02X ", (unsigned int) input_text[i]);
+	}
+	printf("\n");
+	printf("Performing encryption\n");
+	i = 0;
+	while(i < strlen(input_text)) {
+		unsigned int c = otp_encrypt(input_text[i], keyword[i]);
+		ctxt = append_char(ctxt, c);
+		i++;
+	}
+	printf("CIPHER: %s -> ", ctxt);
+	for(int i =0; i < strlen(ctxt); i++) {
+		printf("%02X ", ctxt[i]);
+	}
+	printf("\n");
 
-			printf("Performing encryption\n");
-			ctxt = otp_encrypt(input_text, keyword);
-			
-			break;
-		case DECRYPT:
-			output = fopen("decrypted.txt", "w");
-			if(output == NULL) {
-				perror("Error opening file.");
-				exit(0);
-			}
-			printf("Performing decryption\n");
-			ctxt = otp_decrypt(input_text, keyword);
+	for(int i = 0;i < strlen(input_text);i++) {
+		unsigned int c = otp_decrypt(ctxt[i], keyword[i]);
 
-			break;
-		default:
-			perror("Arrrrgh! No man's land has been reached.\n");
-			assert(0); /* No man's land. */
-			exit(0);
+		plaintext = append_char(plaintext, c);
 	}
 
+	printf("BACK TO PLAINTEXT: %s -> \n", plaintext);
+	for(int i = 0; i < strlen(plaintext); i++) {
+		printf( "%02X ", plaintext[i]);
+	}
+	printf("\n");
 
-	fprintf(output, "%s", ctxt);
-
-	fclose(plaintext);
+	fclose(f_plaintext);
 	fclose(output);
 
 	return 0;
 }
 
-char *
-otp_encrypt(char *input_text, char *keyword) {
-	int i = 0;
-	char *s, *hex;
+unsigned int
+otp_encrypt(char c, char k) {
 	char encrypted_c;
 
-	while(i < input_size)
+
+	if (__VALID__(c))
 	{
-		if (__VALID__(input_text[i]))
-		{
-			encrypted_c = keyword[i] ^ input_text[i];
-			s = append_char(s, encrypted_c);
+		encrypted_c = c ^ k;
 			
-		} else if (!__ES_CH__(input_text[i])){
-			/* If char is an escape character or a space, just ignore it.*/
-			fprintf(stderr,"UNRECOGNISED CHARACTER %c: File stream contains unrecognised character.\nThis algorithm supports Numbers[0-9] and Letters[A-Za-z].\n", input_text[i]);
-			exit(0);
-		}
-
-		i++;
+	} else if (!__ES_CH__(c)){
+		/* If char is an escape character or a space, just ignore it.*/
+		fprintf(stderr,"UNRECOGNISED CHARACTER: File stream contains unrecognised character.\nThis algorithm supports Numbers[0-9] and Letters[A-Za-z].\n");
+		exit(0);
 	}
-
-	return s;
+	return (unsigned int) encrypted_c;
 }
 
-char *
-otp_decrypt(char *input_text, char *keyword) {
-	int i = 0;
-	char *s;
-	char encrypted_c;
+unsigned int
+otp_decrypt(char c, char k) {
+	char decrypted_c;
 
-	s = "";
-	while(i < input_size)
-	{
-		if (__VALID__(input_text[i]))
-		{
-			encrypted_c = keyword[i] ^ input_text[i];
-			s = append_char(s, encrypted_c);
+	decrypted_c = c ^ k;
 
-		} else if (!__ES_CH__(input_text[i])){
-			/* If char is an escape character or a space, just ignore it.*/
-			fprintf(stderr,"UNRECOGNISED CHARACTER %c: File stream contains unrecognised character.\nThis algorithm supports Numbers[0-9] and Letters[A-Za-z].\n", input_text[i]);
-			exit(0);
-		}
-
-		i++;
-	}
-
-	return s;
+	return (unsigned int) decrypted_c;
 }
 
-char *
+unsigned char *
 keyword_generator(int size)
 {
 	int i = 0;
@@ -137,28 +113,44 @@ keyword_generator(int size)
 		s = append_char(s, rand_char);
 		i++;
 	}
-
 	return s;
 }
 
 
-char * 
-append_char(char *string, char char_to_append){
-	char *temp;
-
-	temp = (char *) malloc(sizeof(char) * (strlen(string) + 1));
-
-	strcat(temp, string);
-
-	string = "";
-
-	if(__PRINTABLE__(char_to_append)) {
-		strcat(temp, &char_to_append);
+unsigned char *
+append_char(unsigned char *string, char c){
+	char *new;
+	if(string == NULL) {
+		new = (char *) malloc(sizeof(char)*2);
+		new = strdup( &c);
 	} else {
-		char *hex;
-		sprintf((char *) char_to_append, "%02X", hex);
-		printf("%s", hex);
+		new = (char *) malloc(sizeof(char)*(strlen(string)+2));
+
+		strncat(new, string, strlen(string));
+		strcat(new, &c);
 	}
 
-	return temp;
+	return new;
+}
+
+
+unsigned char *
+read_input(FILE *f_plaintext) {
+	unsigned char *plaintext = NULL;
+	char c;
+
+	do{
+		c = fgetc(f_plaintext);
+		
+		if(__VALID__(c) && !__ES_CH__(c)) {
+
+			
+			plaintext = append_char(plaintext, c);
+		}
+
+	}while(c != EOF);
+	
+	printf("plaintext: %s", plaintext);
+
+	return plaintext;
 }

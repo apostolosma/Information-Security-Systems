@@ -16,157 +16,219 @@ pass phrase “HELLO WORLD” will create the following key grid
 
 int main(int argc, char* argv[]) {
 	FILE *f_plaintext = fopen(argv[1], "r");
-	FILE *output;
+	FILE *output = fopen("result.txt", "a");
+	unsigned char *e,*d;
 
 	if(f_plaintext == NULL) {
 		perror("Error opening file.");
 	}
 
 	unsigned char *plaintext = read_input(f_plaintext);
-	
+
 	__init__(seen);
 
 	construct_grid(plaintext);
 
-	/*
-	switch(__OPER__(argv[2])) {
-		case ENCRYPT:
-			output = fopen("encrypted.txt", "w");
-			if(output == NULL) {
-				perror("Error opening file.");
-				exit(0);
-			}
-			printf("Performing encryption\n");
-			perform_encryption(f_plaintext, plaintext, output);
+	e = playfair_encrypt(plaintext);
+	d = playfair_decrypt(e);
 
-			break;
-		case DECRYPT:
-			output = fopen("decrypted.txt", "w");
-			if(output == NULL) {
-				perror("Error opening file.");
-				exit(0);
-			}
-			printf("Performing decryption\n");
-			perform_decryption(f_plaintext, plaintext, output);
+	fprintf(output, "\tENCRYPTION:\n%s\n\n", e);
+	fprintf(output, "\tDECRYPTION:\n%s\n\n", d);
+	fclose(output);
 
-			break;
-		default:
-			perror("Arrrrgh! No man's land has been reached.\n");
-			assert(0); // No man's land.
-	}*/
-	
 	return 0;
 }
 
 unsigned char * 
-playfair_encrypt(FILE *f_plaintext, unsigned char *plaintext){
+playfair_encrypt(unsigned char *plaintext){
 	char c1, c2, encrypted_c1, encrypted_c2; // characters to be encrypted
 	Pair *pc1, *pc2;
-	char *ciphertext = "";
+	unsigned char *ciphertext = NULL;
+
+	pc1 = (Pair *) malloc(sizeof(Pair) * 1);
+	pc2 = (Pair *) malloc(sizeof(Pair) * 1);
+
+	unsigned int size = strlen(plaintext);
 
 	if(size % 2 == 1) {
 		char x = 'x';
 		strncat(plaintext, &x, 1);
 	}
-	
-	unsigned int size = strlen(plaintext);
 
-	while(size >= 0) {
+	printf("size: %d\n",size);
+	
+	while(1) {
+		if(size <= 0) {
+			break;
+		}
+
 		c1 = *plaintext++;
 		c2 = *plaintext++;
 
+		printf("c1:%c\t&c2:%c -> ",c1,c2);
+		if(c1 == 'J') c1 = 'I';
+		if(c2 == 'J') c2 = 'I';
+		
 		if( c1 == c2 ) {
-			encryped_c2 = 'X';
+			encrypted_c1 = c1;
+			encrypted_c2 = 'X';
 		}
 		else{
-			pc1 = check_position(c1);
-			pc2 = check_position(c2);
-
+			check_position(c1,pc1);
+			check_position(c2,pc2);
 			if(pc1 -> row == pc2 -> row) {
 
-				if(wrap(pc1 -> row)) {
-					pc1 -> row = -1;
-					pc2 -> row = -1;
-				}
-
-				encrypted_c1 = grid[pc1 -> row + 1][pc1 -> col];
-				encrypted_c2 = grid[pc2 -> row + 1][pc2 -> col];
-			}
-			if(pc1 -> col == pc2 -> col) {
 				if(wrap(pc1 -> col)) {
-					pc1 -> col = -1;
-					pc2 -> col = -1;
+					pc1 -> col = 0;
+					if(pc1 -> row != 4)
+					{
+						pc1 -> row ++;
+					} else {
+						pc1 -> row = 0;
+					}
 				}
-				encrypted_c1 = grid[pc1 -> row][pc1 -> col + 1];
-				encrypted_c2 = grid[pc2 -> row][pc2 -> col + 1];
+				else {
+					pc1 -> col++;
+				}
+				if(wrap(pc2 -> col)) {
+					pc2 -> col = 0;
+					if(pc2 -> row != 4)
+					{
+						pc2 -> row ++;
+					} else {
+						pc2 -> row = 0;
+					}
+				}
+				else {
+					pc2 -> col ++;
+				}
+				encrypted_c1 = grid[pc1 -> row][pc1 -> col];
+				encrypted_c2 = grid[pc2 -> row][pc2 -> col];
+				
 			}
-			if(pc1 -> row != pc2 -> row && pc1 -> col != pc2 -> col) {
-				encryped_c1 = grid[pc1 -> row][pc2 -> col];
-				encryped_c2 = grid[pc1 -> row][pc2 -> col];
+			else if(pc1 -> col == pc2 -> col) {
+				if(wrap(pc1 -> row)) {
+					pc1 -> row = 0;
+					if(pc1 -> col != 4) {
+						pc1 -> col ++;
+					} else {
+						pc1 -> col = 0;
+					}
+				}
+				if(wrap(pc2 -> row)) {
+					pc2 -> row = 0;
+					if(pc2 -> col != 4) {
+						pc2 -> col ++;
+					} else {
+						pc2 -> col = 0;
+					}
+				}
+				encrypted_c1 = grid[pc1 -> row][pc1 -> col];
+				encrypted_c2 = grid[pc2 -> row][pc2 -> col];
+			}
+			else if(pc1 -> row != pc2 -> row && pc1 -> col != pc2 -> col) {
+				encrypted_c1 = grid[pc1 -> row][pc2 -> col];
+				encrypted_c2 = grid[pc2 -> row][pc1 -> col];
 			}
 		}
-		size--;
-		strncat(cyphertext, &encryped_c1, 1);
-		strncat(cyphertext, &encryped_c2, 1);
+		size = size - 2;
+
+		printf("en_c1:%c\t&en_c2:%c\n",encrypted_c1,encrypted_c2);
+		ciphertext = append_string(ciphertext, encrypted_c1, encrypted_c2);
+		printf("%s\n",ciphertext);
 	}
 
-	fprintf(output, "%s", cyphertext);
+	return ciphertext;
 
 }
 
 unsigned char *
-playfair_decrypt(FILE *f_plaintext, unsigned char *plaintext) {
+playfair_decrypt(unsigned char *plaintext){
 	char c1, c2, encrypted_c1, encrypted_c2; // characters to be encrypted
 	Pair *pc1, *pc2;
-	char *ciphertext = "";
+	unsigned char *ciphertext = NULL;
+	
+	pc1 = (Pair *) malloc(sizeof(Pair) * 1);
+	pc2 = (Pair *) malloc(sizeof(Pair) * 1);
+
+	unsigned int size = strlen(plaintext);
 
 	if(size % 2 == 1) {
 		char x = 'x';
 		strncat(plaintext, &x, 1);
 	}
-	
-	unsigned int size = strlen(plaintext);
 
-	while(size >= 0) {
+	while(1) {
+		if(size <= 0) {
+			break;
+		}
 		c1 = *plaintext++;
 		c2 = *plaintext++;
 
-		if( c1 == c2 ) {
-			encryped_c2 = 'X';
+		if( c2 == 'X' ) {
+			encrypted_c1 = c1;
+			encrypted_c2 = c1;
 		}
 		else{
-			pc1 = check_position(c1);
-			pc2 = check_position(c2);
+			check_position(c1,pc1);
+			check_position(c2,pc2);
 
 			if(pc1 -> row == pc2 -> row) {
 
-				if(reverse_wrap(pc1 -> row)) {
-					pc1 -> row = 5;
-					pc2 -> row = 5;
+				if(reverse_wrap(pc1 -> col)) {
+					pc1 -> col = 4;
+					if(pc1 -> row != 0) pc1 -> row --;
+					else pc1 -> row = 4;
+				}
+				else {
+					pc1 -> col --;
 				}
 
-				encrypted_c1 = grid[pc1 -> row - 1][pc1 -> col];
-				encrypted_c2 = grid[pc2 -> row - 1][pc2 -> col];
+				if(reverse_wrap(pc2 -> col)) {
+					pc2 -> col = 4;
+					if(pc2 -> row != 0) pc2 -> row --;
+					else pc2 -> row = 4;
+				}
+				else {
+					pc2 -> col --;
+				}
+
+				encrypted_c1 = grid[pc1 -> row][pc1 -> col];
+				encrypted_c2 = grid[pc2 -> row][pc2 -> col];
 			}
 			if(pc1 -> col == pc2 -> col) {
 				if(reverse_wrap(pc1 -> col)) {
-					pc1 -> col = 5;
-					pc2 -> col = 5;
+					if(pc1 -> col == 0) pc1 -> col = 4;
+					else pc1 -> col--;
+					pc1->row = 4;
 				}
-				encrypted_c1 = grid[pc1 -> row][pc1 -> col - 1];
-				encrypted_c2 = grid[pc2 -> row][pc2 -> col - 1];
+				else {
+					pc1 -> row = 4;
+				}
+
+				if(reverse_wrap(pc2 -> col)) {
+					
+					if(pc2 -> col == 0) pc2 -> col = 4;
+					else pc2 -> col --;
+					pc2 -> row = 4;
+				}
+				else {
+					pc2 -> row = 4;
+				}
+				encrypted_c1 = grid[pc1 -> row][pc1 -> col];
+				encrypted_c2 = grid[pc2 -> row][pc2 -> col];
 			}
 			if(pc1 -> row != pc2 -> row && pc1 -> col != pc2 -> col) {
-				encryped_c1 = grid[pc1 -> row][pc2 -> col];
-				encryped_c2 = grid[pc1 -> row][pc2 -> col];
+				encrypted_c1 = grid[pc1 -> row][pc2 -> col];
+				encrypted_c2 = grid[pc2 -> row][pc1 -> col];
 			}
 		}
-		size--;
-		strncat(cyphertext, &encryped_c1, 1);
-		strncat(cyphertext, &encryped_c2, 1);
+		size = size - 2;
+		ciphertext = append_string(ciphertext, encrypted_c1, encrypted_c2);
+		
 	}
 
-	fprintf(output, "%s", cyphertext);
+	return ciphertext;
 }
 
 void
@@ -203,6 +265,7 @@ construct_grid(unsigned char *plaintext) {
 	}
 
 	if(row != 4 && col != 4) {
+		int counter = 0;
 		/* This means our grid has empty cells, so we need to fill them in */
 		for(int i = 0; i < 26; i ++) {
 			if(!seen[i]) {
@@ -212,8 +275,7 @@ construct_grid(unsigned char *plaintext) {
 					row++; col = 0;
 				}
 				else {
-					grid[row][col] = c;
-					
+					grid[row][col] = (char) (i + 'A');
 					col++;
 				}
 			}
@@ -221,7 +283,6 @@ construct_grid(unsigned char *plaintext) {
 	}
 }
 
-void 
 
 int find_key(char c) {
     return (int) c - (int) 'A';
@@ -243,32 +304,71 @@ bool reverse_wrap(int a) {
 
 unsigned char *
 read_input(FILE *f_plaintext) {
-	unsigned int size;
+	unsigned char *plaintext = NULL;
+	char c;
 
-	fseek(f_plaintext,0L,SEEK_END);
-	size = ftell(f_plaintext);
-	rewind(f_plaintext);
+	do{
+		c = fgetc(f_plaintext);
+		
+		if(__VALID__(c) && !__ES_CH__(c)) {
+			plaintext = append_char(plaintext, c);
+		}
+	}while(c != EOF);
 	
-	unsigned char *dummy = (char *)malloc(sizeof(char) * size);
-	unsigned char *plaintext = (char *)malloc(sizeof(char) * size);
-
-	while(fgets(dummy, size, f_plaintext)) {
-		strcat(plaintext, dummy);
-	}
+	printf("plaintext: %s", plaintext);
 
 	return plaintext;
 }
 
-Pair *
-check_position(char a) {
-	Pair p;
+unsigned char * 
+append_string(char *string, char c1, char c2) {
+	unsigned char *new;
+	if(string != NULL) {
+		size_t len = strlen(string) + 3; // 3 comes from '\0' character and size of the characters we want to append.
+		new = (unsigned char *)malloc(sizeof(unsigned char *) * len);
+
+		strncat(new, string, strlen(string));
+		strncat(new, &c1, 1);
+		strncat(new, &c2, 1);
+	} else {
+		size_t len = 3;
+		new = (unsigned char *)malloc(sizeof(unsigned char *) * len);
+
+		strncat(new, &c1, 1);
+		strncat(new, &c2, 1);
+	}
+
+	return new;
+}
+
+unsigned char * 
+append_char(char *string, char c1) {
+	unsigned char *new;
+	if(string != NULL) {
+		size_t len = strlen(string) + 2; // 3 comes from '\0' character and size of the characters we want to append.
+		new = (unsigned char *)malloc(sizeof(unsigned char *) * len);
+
+		strncat(new, string, strlen(string));
+		strncat(new, &c1, 1);
+	} else {
+		size_t len = 2;
+		new = (unsigned char *)malloc(sizeof(unsigned char *) * len);
+
+		strncat(new, &c1, 1);
+	}
+
+	return new;
+}
+
+
+void
+check_position(char a, Pair *p) {
 	for(int i = 0; i < 5; i++) {
 		for(int j = 0; j < 5; j++) {
 			if(a == grid[i][j]) {
-				p.row = i;
-				p.col = j;
-
-				return p;
+				p -> row = i;
+				p -> col = j;
+				return;
 			}
 		}
 	}

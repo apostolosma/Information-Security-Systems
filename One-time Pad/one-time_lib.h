@@ -20,18 +20,19 @@
 #define __OPER__(c) 		((strcmp(c, "encryption") == 0 || strcmp(c, "ENCRYPTION") == 0) ? ENCRYPT : ((strcmp(c, "decryption") == 0 || strcmp(c, "DECRYPTION") == 0) ? DECRYPT : FALSE))
 #define __ES_CH__(c) 		(((c == '\n') || (c == '\a') || (c == '\b') || (c == '\v') || (c == '\r') || (c == '\t') || (c == '\'') || (c == '\?') || (c == '\\') || (c == '\"') || (c == '\f') || (c == ' ') || (c == EOF)) ? TRUE : FALSE)
 
-long input_size;
 char *ctxt;
 
-FILE* plaintext;
+FILE* f_plaintext;
 FILE* output;
 
 void __init__();
 
-char * append_char(char *string, char char_to_append);
+unsigned char *append_char(unsigned char *string, char char_to_append);
 
-char * keyword_generator(int size);
+unsigned char *keyword_generator(int size);
 
-char * otp_encrypt(char *input_text, char *keyword);
+unsigned int otp_encrypt(char c, char k);
 
-char * otp_decrypt(char *input_text, char *keyword);
+unsigned int otp_decrypt(char c, char k);
+
+unsigned char *read_input(FILE *f_plaintext);
